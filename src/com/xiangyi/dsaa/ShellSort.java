@@ -1,13 +1,14 @@
 package com.xiangyi.dsaa;
 
 /**
+ * O(N*(logN)^2)
  * @author zengchao
  * @date 2019-03-12
  */
-public class BubbleSort implements Sort{
+public class ShellSort implements Sort{
     public static void main(String[] args) {
-        Sort sort=new BubbleSort();
-        int[] array=sort.genArray(1000);
+        Sort sort=new ShellSort();
+        int[] array=sort.genArray(16);
         sort.print(array);
         sort.sort(array);
         sort.print(array);
@@ -16,14 +17,25 @@ public class BubbleSort implements Sort{
 
     @Override
     public void sort(int[] array) {
-        for(int i=1;i<array.length-2;i++){
-            for(int j=0;j<array.length-i;j++){
-                if(array[j]> array[j+1]){
-                    int t=array[j];
-                    array[j]=array[j+1];
-                    array[j+1]=t;
+        int h=1;
+
+        while (3*h+1<array.length){
+            h=3*h+1;
+        }
+        while (h>0){
+            for(int i=0;i<h;i++){
+                for(int m=h+i;m<array.length;m+=h){
+                    int t=array[m];
+                    int j=m;
+                    while (j>=h&&t<array[j-h]){
+                        array[j]=array[j-h];
+                        j-=h;
+                    }
+                    array[j]=t;
+
                 }
             }
+            h=(h-1)/3;
         }
     }
 }

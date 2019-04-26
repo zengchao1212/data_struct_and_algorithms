@@ -1,12 +1,14 @@
 package com.xiangyi.dsaa;
 
 /**
+ * 比较为O(N^2)，交换为O(N)，在高度有序下，每一轮只需一次比较(若果为有序数组，则总共只需N次比较，复杂度为O(N))，而选择排序仍需N次比较，
+ * 故一般比选择排序更高效
  * @author zengchao
  * @date 2019-03-12
  */
-public class SelectSort implements Sort{
+public class InsertSort implements Sort{
     public static void main(String[] args) {
-        Sort sort=new SelectSort();
+        Sort sort=new InsertSort();
         int[] array=sort.genArray(1000);
         sort.print(array);
         sort.sort(array);
