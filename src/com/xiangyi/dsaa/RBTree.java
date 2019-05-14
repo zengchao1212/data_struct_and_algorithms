@@ -22,7 +22,7 @@ public class RBTree {
         private int v;
         private boolean red=true;
 
-        public Node(Node p,int v){
+        Node(Node p, int v){
             this.p=p;
             this.v=v;
         }
@@ -39,59 +39,164 @@ public class RBTree {
                 root=c;
             }
         }
-        public void toRight(){
+        private void xz(boolean toLeft){
             if(p!=null){
                 Node c=this;
                 Node p=c.p;
                 Node g=p.p;
                 p.p=c;
                 c.p=g;
-                p.l=c.r;
-                if(p.l!=null){
-                    p.l.p=p;
+                if(toLeft){
+                    //向下搜索的时候可能存在此情况
+                    p.r=c.l;
+                    if(p.r!=null){
+                        p.r.p=p;
+                    }
+                    c.l=p;
+                }else{
+                    p.l=c.r;
+                    if(p.l!=null){
+                        p.l.p=p;
+                    }
+                    c.r=p;
                 }
-                c.r=p;
                 rc(c,p,g);
             }
+        }
+        /*
+        右旋
+        1.改变父节点颜色
+        2.改变节点颜色
+        3.父节点变成右子节点，节点变成父节点
+         */
+        void toRight(){
+            xz(false);
 
         }
-
-        public void toLeft(){
-            if(p!=null){
-                Node c=this;
-                Node p=c.p;
-                Node g=p.p;
-                p.p=c;
-                c.p=g;
-                p.r=c.l;
-                if(p.r!=null){
-                    p.r.p=p;
-                }
-                c.l=p;
-                rc(c,p,g);
-            }
+        /*
+        左旋
+        1.改变父节点颜色
+        2.改变节点颜色
+        3.父节点变成左子节点，节点变成父节点
+         */
+        void toLeft(){
+            xz(true);
         }
     }
 
+    private class Printer{
+        /**
+         * 获取树的最大可能高度
+         * @return
+         */
+        private int getHeight(){
+            int i=0;
+            Node c=root;
+            while (c!=null){
+                i++;
+                c=c.l;
+            }
+            return i+1;
+        }
+
+        /**
+         * 获取树的宽度
+         * @return
+         */
+        private int getWidth(){
+            return 1<<getHeight();
+        }
+
+        private void writeValue(Graphics2D graphics,int x,int y,Node c){
+            graphics.fillOval(x, y, 50, 50);
+            graphics.setColor(Color.WHITE);
+            FontMetrics metrics = graphics.getFontMetrics(graphics.getFont());
+            int widthOffset = 25 - metrics.stringWidth(String.valueOf(c.v)) / 2;
+            int heightOffset = 25 + metrics.getHeight() / 2;
+            graphics.drawString("" + c.v, x + widthOffset, y + heightOffset);
+        }
+        public void toImage(String path) throws IOException {
+
+            int width=getWidth()*50;
+            int height=getHeight()*200;
+            BufferedImage img=new BufferedImage(width,height,BufferedImage.TYPE_INT_RGB);
+            Graphics2D graphics=img.createGraphics();
+
+            graphics.setColor(Color.WHITE);
+            graphics.fillRect(0, 0, img.getWidth(), img.getHeight());
+            graphics.setFont(new Font(null,Font.BOLD,16));
+            Queue<Node> queue=new LinkedList<>();
+            Map<Node,Integer> wm=new HashMap<>();
+            Map<Node,Integer> hm=new HashMap<>();
+            queue.offer(root);
+            wm.put(root,width/2);
+            hm.put(root,100);
+            for(Node c:broad()){
+                if(c.red){
+                    graphics.setColor(Color.RED);
+                }else{
+                    graphics.setColor(Color.BLACK);
+                }
+                if(c.p==null){
+                    writeValue(graphics,wm.get(c),hm.get(c),c);
+                }else {
+                    int px = wm.get(c.p);
+                    int py = hm.get(c.p);
+                    int cx;
+                    int cy = py + 200;
+                    if (c.p.p == null) {
+                        if (c.v < c.p.v) {
+                            cx = px / 2;
+                        } else {
+                            cx = px + px / 2;
+                        }
+                    } else {
+                        int ppx = wm.get(c.p.p);
+                        if (c.v < c.p.v) {
+                            cx = px - Math.abs((ppx - px)) / 2;
+                        } else {
+                            cx = px + Math.abs((ppx - px)) / 2;
+                        }
+                    }
+
+                    wm.put(c, cx);
+                    hm.put(c, cy);
+                    writeValue(graphics,wm.get(c),hm.get(c),c);
+                    graphics.setColor(Color.BLUE);
+                    graphics.drawLine(px + 25, py + 50, cx + 25, cy);
+                }
+            }
+            File file=new File(path);
+            if(!file.exists()){
+                file.createNewFile();
+            }
+            String ext=path.substring(path.lastIndexOf('.')+1);
+            ImageIO.write(img,ext,file);
+        }
+    }
+
+    //当前节点和父节点都是红色的情况需要旋转
     private void xz(Node c,Node p,Node g){
-        if(p.v<g.v && c.v<p.v){
+        //外侧子节点
+        if((p.v<g.v && c.v<p.v)||(p.v>=g.v && c.v>=p.v)){
             g.red=!g.red;
             p.red=false;
-            p.toRight();
-        }else if(p.v<g.v && c.v>=p.v){
+            //左外侧
+            if(p.v<g.v && c.v<p.v){
+                p.toRight();
+            }else{
+                p.toLeft();
+            }
+        }else{
             g.red=!g.red;
             c.red=false;
-            c.toLeft();
-            c.toRight();
-        }else if(p.v>=g.v && c.v>=p.v){
-            g.red=!g.red;
-            p.red=false;
-            p.toLeft();
-        }else if(p.v>=g.v && c.v<p.v){
-            g.red=!g.red;
-            c.red=false;
-            c.toRight();
-            c.toLeft();
+            if(p.v<g.v && c.v>=p.v){
+                c.toLeft();
+                c.toRight();
+            }else{
+                c.toRight();
+                c.toLeft();
+            }
         }
     }
     public void insert(int v){
@@ -106,16 +211,19 @@ public class RBTree {
             if(p!=null){
                 g=p.p;
             }
+            //黑色节点有两个红色子节点，节点变成红色(根节点除外)，子节点变成黑色
             if(c.l!=null && c.r!=null && c.l.red && c.r.red){
-                if(p!=null){
+                if(c!=root){
                     c.red=true;
                 }
                 c.l.red=false;
                 c.r.red=false;
+                //父节点也为红色，则需要旋转
                 if(p!=null&&p.red){
                     xz(c,p,g);
                 }
             }
+            //将当前节点设为子节点
             g=p;
             p=c;
             c=v<c.v?c.l:c.r;
@@ -126,6 +234,7 @@ public class RBTree {
                 }else {
                     p.r=c;
                 }
+                //父节点也为红色，则需要旋转
                 if(p.red){
                     xz(c,p,g);
                 }
@@ -166,6 +275,7 @@ public class RBTree {
         Node c=root,p=null;
         while (true){
             if(c.v==v){
+                //没有子节点，直接删除
                 if(c.l==null || c.r==null){
                     if(p==null){
                         root=c.l==null?c.r:c.l;
@@ -209,6 +319,10 @@ public class RBTree {
         return c;
     }
 
+    /**
+     * 递归实现深度优先遍历
+     * @return
+     */
     public List<Node> getAll(){
         List<Node> list=new ArrayList<>();
         if(root!=null){
@@ -224,13 +338,18 @@ public class RBTree {
             loop(n.r,list);
         }
     }
-    private int getLevel(){
+
+    /**
+     * 广度优先遍历
+     * @return
+     */
+    public List<Node> broad(){
         Queue<Node> queue=new LinkedList<>();
+        List<Node> nodes=new LinkedList<>();
         queue.offer(root);
-        int i=0;
         while (!queue.isEmpty()){
             Node c=queue.poll();
-            i++;
+            nodes.add(c);
             if(c.l!=null){
                 queue.offer(c.l);
             }
@@ -238,107 +357,74 @@ public class RBTree {
                 queue.offer(c.r);
             }
         }
-        int c=0;
-        while (i>0){
-            c++;
-            i=i>>1;
-        }
-        return c;
+        return nodes;
     }
-    public void print() throws IOException {
-        int level=getLevel();
-        int width=((1<<(level-1)))*200;
-        BufferedImage img=new BufferedImage(width+50,width+50,BufferedImage.TYPE_INT_RGB);
-        Graphics2D graphics=img.createGraphics();
 
-        graphics.setColor(Color.WHITE);
-        graphics.fillRect(0, 0, img.getWidth(), img.getHeight());
-        graphics.setFont(new Font(null,Font.BOLD,16));
-//        graphics.fi
-        Queue<Node> queue=new LinkedList<>();
-        Map<Node,Integer> wm=new HashMap<>();
-        Map<Node,Integer> hm=new HashMap<>();
-        queue.offer(root);
-        wm.put(root,width/2);
-        hm.put(root,50);
-        while (!queue.isEmpty()){
-            Node c=queue.poll();
-            if(c.red){
-                graphics.setColor(Color.RED);
-            }else{
-                graphics.setColor(Color.BLACK);
-            }
-            if(c.p==null){
-                graphics.drawString(""+c.v,wm.get(c),hm.get(c));
-            }else{
-                int px=wm.get(c.p);
-                int py=hm.get(c.p);
-                int cx;
-                int cy=py+75;
-                if(c.p.p==null){
-                    if(c.v<c.p.v){
-                        cx=px/2;
-                    }else{
-                        cx=px+px/2;
-                    }
-                }else{
-                    int ppx=wm.get(c.p.p);
-                    if(c.v<c.p.v){
-                        cx=px-Math.abs((ppx-px))/2;
-                    }else{
-                        cx=px+Math.abs((ppx-px))/2;
-                    }
-                }
+    /**
+     * 深度度优先遍历
+     * @return
+     */
+    public List<Node> deep(){
+        Stack<Node> stack=new Stack<>();
+        List<Node> nodes=new LinkedList<>();
+        stack.push(root);
+        while (!stack.isEmpty()){
+            Node c=stack.pop();
+            nodes.add(c);
 
-                wm.put(c,cx);
-                hm.put(c,cy);
-                graphics.drawString(""+c.v,cx,cy);
-                graphics.setColor(Color.BLUE);
-                graphics.drawLine(px,py,cx,cy);
+            if(c.r!=null){
+                stack.push(c.r);
             }
             if(c.l!=null){
-                queue.offer(c.l);
-            }
-            if(c.r!=null){
-                queue.offer(c.r);
+                stack.push(c.l);
             }
         }
-        File file=new File("/Users/zengchao/rbtree.jpg");
-        if(!file.exists()){
-            file.createNewFile();
-        }
-        ImageIO.write(img,"jpg",file);
+        return nodes;
     }
 
-    public void broad(){
-        Queue<Node> queue=new LinkedList<>();
-        queue.offer(root);
-        while (!queue.isEmpty()){
-            Node c=queue.poll();
-            System.out.print(c.v+"\t");
-            if(c.l!=null){
-                queue.offer(c.l);
-            }
-            if(c.r!=null){
-                queue.offer(c.r);
-            }
-        }
+    public void print(String path) throws IOException {
+        new Printer().toImage(path);
     }
+
     public static void main(String[] args) throws IOException {
         RBTree tree=new RBTree();
-//      int[] array={388,306,793,16,338,761,816,170,551,862,92,286,503,565,891,69,233,488,521,664,982,208,397,550,626,673,893,580,669,906,902,};
-        int[] array={388,306,793,16,338,761,816,170,551,862,92,286,503,565,891,69,233,488,521,664,982,208,397,550,626,673,893,580,669,906,902,};
-        for(int i:array){
-            tree.insert(i);
+        int nodeCount=100;
+        int[] array=new int[nodeCount];
+        Random random=new Random();
+        System.out.print("array =[");
+        for(int i=0;i<nodeCount;i++){
+            array[i]=random.nextInt(nodeCount*10);
+            tree.insert(array[i]);
+            System.out.print(array[i]+",");
         }
-//        tree.insert(16);
-//        tree.insert(50);
-//        tree.insert(25);
-//        tree.insert(75);
-//        tree.insert(12);
-//        tree.insert(18);
-//        tree.print();
+        System.out.print("]");
+        System.out.println();
+        tree.print("/Users/zengchao/rbtree.png");
+
+        int searchValue=array[random.nextInt(nodeCount)];
+        System.out.println("search value "+searchValue);
+        int findSize=tree.find(searchValue).size();
+        int reallySize=0;
+        for(int value:array){
+            if(value==searchValue){
+                reallySize++;
+            }
+        }
+        assert findSize==reallySize;
+        System.out.println("search value is "+searchValue+",and finds "+findSize);
+
+//        tree.delete(searchValue);
+//        tree.print("/Users/zengchao/rbtree2.png");
+//        assert tree.find(searchValue).size()==0;
+        for(Node node:tree.getAll()){
+            System.out.print(node.v+",");
+        }
+        System.out.println();
+        for(Node node:tree.deep()){
+            System.out.print(node.v+",");
+        }
+        System.out.println();
 //        tree.broad();
-        tree.print();
+//        tree.print();
     }
 }
